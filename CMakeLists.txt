@@ -13,6 +13,7 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 
 set(LIB_STATIC_NAME "${PROJECT_NAME}-static")
 set(LIB_DYNAMIC_NAME "${PROJECT_NAME}-dynamic")
+set(DEPEND_LIBS)
 
 option(USE_GPU "Use GPU" OFF)
 option(USE_OPENCV "Use OpenCV" OFF)
@@ -20,6 +21,7 @@ option(USE_OPENCV "Use OpenCV" OFF)
 if (USE_OPENCV)
     find_package(OpenCV REQUIRED)
     add_compile_definitions(OPENCV)
+    list(APPEND DEPEND_LIBS ${OpenCV_LIBS})
 endif ()
 
 if (USE_GPU)
@@ -27,7 +29,7 @@ if (USE_GPU)
     add_compile_definitions(GPU CUDNN)
 
     set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -gencode arch=compute_75,code=compute_75")
-    set(CUDA_LIBS "${CUDA_LIBRARIES};cublas;cudnn;curand;cudart")
+    list(APPEND DEPEND_LIBS "${CUDA_LIBRARIES};cublas;cudnn;curand;cudart")
 endif ()
 
 find_package(OpenSSL REQUIRED)
@@ -113,18 +115,20 @@ if (USE_GPU)
             src/im2col_kernels.cu
             src/maxpool_layer_kernels.cu
             )
-    set(INCLUDE_DIRS include src ${CUDA_TOOLKIT_INCLUDE} ${OpenCV_INCLUDE_DIRS})
+    set(INCLUDE_DIRS include src ${CUDA_TOOLKIT_INCLUDE})
     include_directories(${INCLUDE_DIRS})
     cuda_include_directories(${INCLUDE_DIRS})
     cuda_add_library(${LIB_STATIC_NAME} STATIC ${LIB_SOURCE_FILES} ${CUDA_SOURCE_FILES} OPTIONS ${CUDA_NVCC_FLAGS})
 else ()
-    set(INCLUDE_DIRS include src ${OpenCV_INCLUDE_DIRS})
+    set(INCLUDE_DIRS include src)
     include_directories(${INCLUDE_DIRS})
     add_library(${LIB_STATIC_NAME} STATIC ${LIB_SOURCE_FILES})
 endif ()
 
 add_executable(${PROJECT_NAME} ${EXE_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} ${LIB_STATIC_NAME} ${CUDA_LIBS} ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME} ${LIB_STATIC_NAME} ${DEPEND_LIBS})
 
 add_executable(chkweights examples/check_weights.cpp)
-target_link_libraries(chkweights ${LIB_STATIC_NAME} ${CUDA_LIBS} ${OpenCV_LIBS} OpenSSL::SSL)
+target_link_libraries(chkweights ${LIB_STATIC_NAME} ${DEPEND_LIBS} OpenSSL::SSL)
+
+

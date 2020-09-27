@@ -296,7 +296,7 @@ void test_yolo(char *cfgfile, char *weightfile, char *filename, float thresh)
 
         draw_detections(im, dets, l.side*l.side*l.n, thresh, voc_names, alphabet, 20);
         save_image(im, "predictions");
-        show_image(im, "predictions", 0);
+        //show_image(im, "predictions", 0);
         free_detections(dets, nboxes);
         free_image(im);
         free_image(sized);
