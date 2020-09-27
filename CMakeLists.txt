@@ -1,23 +1,30 @@
 cmake_minimum_required(VERSION 3.15)
 set(CMAKE_C_COMPILER gcc)
 set(CMAKE_CXX_COMPILER g++)
+set(CMAKE_CXX_STANDARD 17)
 
 project(darknet)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_HOME_DIRECTORY})
 
-set(CUDA_LIB_PATH "/usr/local/cuda/lib64")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-unused-result -Wno-unknown-pragmas -Wfatal-errors -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-result -Wno-unknown-pragmas -Wfatal-errors -fPIC")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread -L ${CUDA_LIB_PATH}")
-set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -gencode arch=compute_75,code=compute_75")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
+
 set(LIB_STATIC_NAME "${PROJECT_NAME}-static")
 set(LIB_DYNAMIC_NAME "${PROJECT_NAME}-dynamic")
 
-add_compile_definitions(GPU CUDNN)
+find_package(OpenCV REQUIRED)
 
-find_package(CUDA REQUIRED)
-set(CUDA_LIBS "${CUDA_LIBRARIES};cublas;cudnn;curand;cudart")
+option(USE_GPU "Use GPU" OFF)
+
+if (USE_GPU)
+    enable_language(CUDA)
+    add_compile_definitions(GPU CUDNN)
+
+    set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -gencode arch=compute_75,code=compute_75")
+    set(CUDA_LIBS "${CUDA_LIBRARIES};cublas;cudnn;curand;cudart")
+endif ()
 
 find_package(OpenSSL REQUIRED)
 
@@ -89,25 +96,28 @@ set(EXE_SOURCE_FILES
         examples/tag.c
         examples/yolo.c)
 
-set(CUDA_SOURCE_FILES
-        src/activation_kernels.cu
-        src/avgpool_layer_kernels.cu
-        src/blas_kernels.cu
-        src/col2im_kernels.cu
-        src/convolutional_kernels.cu
-        src/crop_layer_kernels.cu
-        src/deconvolutional_kernels.cu
-        src/dropout_layer_kernels.cu
-        src/im2col_kernels.cu
-        src/maxpool_layer_kernels.cu
-        )
-
-set(INCLUDE_DIRS include src /usr/local/cuda/include)
-include_directories(${INCLUDE_DIRS})
-cuda_include_directories(${INCLUDE_DIRS})
-
-cuda_add_library(${LIB_STATIC_NAME} STATIC ${LIB_SOURCE_FILES} ${CUDA_SOURCE_FILES} OPTIONS ${CUDA_NVCC_FLAGS})
-#cuda_add_library(${LIB_DYNAMIC_NAME} SHARED ${LIB_SOURCE_FILES} ${CUDA_SOURCE_FILES} OPTIONS ${CUDA_NVCC_FLAGS})
+if (USE_GPU)
+    set(CUDA_SOURCE_FILES
+            src/activation_kernels.cu
+            src/avgpool_layer_kernels.cu
+            src/blas_kernels.cu
+            src/col2im_kernels.cu
+            src/convolutional_kernels.cu
+            src/crop_layer_kernels.cu
+            src/deconvolutional_kernels.cu
+            src/dropout_layer_kernels.cu
+            src/im2col_kernels.cu
+            src/maxpool_layer_kernels.cu
+            )
+    set(INCLUDE_DIRS include src ${CUDA_TOOLKIT_INCLUDE} ${OpenCV_INCLUDE_DIRS})
+    include_directories(${INCLUDE_DIRS})
+    cuda_include_directories(${INCLUDE_DIRS})
+    cuda_add_library(${LIB_STATIC_NAME} STATIC ${LIB_SOURCE_FILES} ${CUDA_SOURCE_FILES} OPTIONS ${CUDA_NVCC_FLAGS})
+else ()
+    set(INCLUDE_DIRS include src ${OpenCV_INCLUDE_DIRS})
+    include_directories(${INCLUDE_DIRS})
+    add_library(${LIB_STATIC_NAME} STATIC ${LIB_SOURCE_FILES})
+endif ()
 
 add_executable(${PROJECT_NAME} ${EXE_SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME} ${LIB_STATIC_NAME} ${CUDA_LIBS})

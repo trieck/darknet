@@ -26,7 +26,7 @@ int main(int argc, char** argv)
     unsigned char result[MD5_DIGEST_LENGTH];
 
     for (auto i = 0; i < net->n; ++i) {
-        auto layer = net->layers[i];
+        const auto& layer = net->layers[i];
         if (layer.nweights) {
             MD5((uint8_t*) layer.weights, layer.nweights * sizeof(float), result);
             printf("layer 0x%.2x, type: 0x%.2x, weights: 0x", i, layer.type);
