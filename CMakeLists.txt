@@ -14,9 +14,13 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
 set(LIB_STATIC_NAME "${PROJECT_NAME}-static")
 set(LIB_DYNAMIC_NAME "${PROJECT_NAME}-dynamic")
 
-find_package(OpenCV REQUIRED)
-
 option(USE_GPU "Use GPU" OFF)
+option(USE_OPENCV "Use OpenCV" OFF)
+
+if (USE_OPENCV)
+    find_package(OpenCV REQUIRED)
+    add_compile_definitions(OPENCV)
+endif ()
 
 if (USE_GPU)
     enable_language(CUDA)
@@ -120,7 +124,7 @@ else ()
 endif ()
 
 add_executable(${PROJECT_NAME} ${EXE_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} ${LIB_STATIC_NAME} ${CUDA_LIBS})
+target_link_libraries(${PROJECT_NAME} ${LIB_STATIC_NAME} ${CUDA_LIBS} ${OpenCV_LIBS})
 
 add_executable(chkweights examples/check_weights.cpp)
-target_link_libraries(chkweights ${LIB_STATIC_NAME} ${CUDA_LIBS} OpenSSL::SSL)
+target_link_libraries(chkweights ${LIB_STATIC_NAME} ${CUDA_LIBS} ${OpenCV_LIBS} OpenSSL::SSL)
